@@ -1,0 +1,4 @@
+.env
+.env_redirects
+backups/
+**/__pycache__/

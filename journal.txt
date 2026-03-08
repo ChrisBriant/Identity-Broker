@@ -1,0 +1,12 @@
+07/03/2026
+
+I have created the architecture which includes a base class for providers and implemented the Google provider to handle sign in to Google.
+
+Endpoints have been created for the authentication flow. It will retrieve the sign in URL for the IDP depending on which one is called and then
+ it has an endpoint to process the sign in from the code.
+
+ The sign in retrieves the token from the IDP, creates or gets the user record from the database and issues a JWT token.
+
+ 08/03/2026
+ 
+  
