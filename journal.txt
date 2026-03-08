@@ -8,5 +8,5 @@ Endpoints have been created for the authentication flow. It will retrieve the si
  The sign in retrieves the token from the IDP, creates or gets the user record from the database and issues a JWT token.
 
  08/03/2026
- 
-  
+
+  1. I added Discord as an additional provider.

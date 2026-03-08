@@ -8,6 +8,10 @@ class TokenSchema(BaseModel):
     access_token: str
     refresh_token: str
 
+class ProviderSchema(BaseModel):
+    id : str
+    name : str
+
 # class WordWithoutSelectionSchema(BaseModel):
 #     id: int
 #     word: str

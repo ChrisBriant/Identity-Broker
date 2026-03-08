@@ -104,5 +104,10 @@ The architecture allows new providers to be added with minimal code changes.
 
 ### Start authentication
 
-```http
-GET /auth/{provider}/login
+http GET /auth/{provider}/login
+
+### Running with Uvicorn
+
+Run the following to start the server running using Uvicorn
+
+uvicorn main:app --host 0.0.0.0 --port 8000 --reload
