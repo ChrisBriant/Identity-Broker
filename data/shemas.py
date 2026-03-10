@@ -12,6 +12,11 @@ class ProviderSchema(BaseModel):
     id : str
     name : str
 
+class UserProfileSchema(BaseModel):
+    id : int
+    idp : str
+    alias : str
+
 # class WordWithoutSelectionSchema(BaseModel):
 #     id: int
 #     word: str

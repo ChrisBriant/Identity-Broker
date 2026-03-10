@@ -10,3 +10,12 @@ Endpoints have been created for the authentication flow. It will retrieve the si
  08/03/2026
 
   1. I added Discord as an additional provider.
+
+09/03/2026
+
+1. Started on the front end, handling the authentication flow.
+
+2. Became aware of a more secure approach to the backend architecture.
+
+The backend receives the code, gets the token, creates JWT and then redirects to the backend.
+

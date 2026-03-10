@@ -12,7 +12,8 @@ class DiscordProvider(BaseProvider):
 
         params = {
             "client_id": os.environ.get("CLIENT_ID_DISCORD"),
-            "redirect_uri": os.environ.get("CLIENT_REDIRECT_URI"),
+            "redirect_uri": os.environ.get("BACKEND_REDIRECT_URI"),
+            "redirect_uri": "http://localhost:8000/auth/discord/callbackwithredirect",
             "response_type": "code",
             "scope": "openid email identify",
         }
@@ -25,7 +26,7 @@ class DiscordProvider(BaseProvider):
         payload = {
             'grant_type': 'authorization_code',
             'code': code,
-            'redirect_uri': os.environ.get("CLIENT_REDIRECT_URI")
+            'redirect_uri': "http://localhost:8000/auth/discord/callbackwithredirect"
         }
         headers = {
             'Content-Type': 'application/x-www-form-urlencoded'
