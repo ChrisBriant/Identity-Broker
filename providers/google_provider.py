@@ -12,7 +12,8 @@ class GoogleProvider(BaseProvider):
 
         params = {
             "client_id": os.environ.get("CLIENT_ID_GL"),
-            "redirect_uri": os.environ.get("CLIENT_REDIRECT_URI"),
+            #"redirect_uri": os.environ.get("CLIENT_REDIRECT_URI"),
+            "redirect_uri": f"{os.environ.get("BACKEND_REDIRECT_URI")}/auth/google/callbackwithredirect",
             "response_type": "code",
             "scope": "openid email profile",
             "access_type": "offline",
@@ -30,7 +31,8 @@ class GoogleProvider(BaseProvider):
             "client_secret": os.environ.get("CLIENT_SECRET_GL"),
             "code": code,
             "grant_type": "authorization_code",
-            "redirect_uri": os.environ.get("CLIENT_REDIRECT_URI")
+            #"redirect_uri": os.environ.get("CLIENT_REDIRECT_URI"),
+            "redirect_uri": f"{os.environ.get("BACKEND_REDIRECT_URI")}/auth/google/callbackwithredirect",
         }
 
         headers = {

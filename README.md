@@ -111,3 +111,4 @@ http GET /auth/{provider}/login
 Run the following to start the server running using Uvicorn
 
 uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+uvicorn main:app --host 0.0.0.0 --port 8000 --reload --ssl-keyfile=key.pem --ssl-certfile=cert.pem

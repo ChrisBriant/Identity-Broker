@@ -151,8 +151,8 @@ async def auth_callback_with_redirect(provider: str, code: str):
         value=jwt_token_pair["access"],
         httponly=True,
         secure=True,          # HTTPS only
-        samesite="lax",
-        max_age=ACCESS_TOKEN_LIFETIME          
+        samesite="none",
+        max_age=ACCESS_TOKEN_LIFETIME,
     )
 
     # Refresh token cookie
@@ -161,8 +161,8 @@ async def auth_callback_with_redirect(provider: str, code: str):
         value=jwt_token_pair["refresh"],
         httponly=True,
         secure=True,
-        samesite="lax",
-        max_age=REFRESH_TOKEN_LIFETIME   
+        samesite="none",
+        max_age=REFRESH_TOKEN_LIFETIME, 
     )
 
     return response
@@ -306,6 +306,7 @@ async def refresh_jwt_token (refresh_token:str):
 #TODO
 #The endpoints with redirect hae been set up, but will need to be consolidated at some point, remove the old architecture
 #Set the discord and google providers with the correct redirect code
+#Return IDP list with the profile
 
 # EXAMPLE TOKEN FOR TESTING
 # {
