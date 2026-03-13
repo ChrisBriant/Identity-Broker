@@ -129,53 +129,48 @@ async def auth_callback_with_redirect(provider: str, code: str):
 
     user_profile = await idp.get_user_info(access_token)
 
+    print("USER PROFILE", user_profile)
 
+    # # database logic here
+    # user_record = await get_or_add_user(str(user_profile["id"]),provider,None,user_profile['email'])
+    # if not user_record:
+    #     raise HTTPException(
+    #         status_code=400,
+    #         detail="Failed to create the user"
+    #     )
+    # print("USER FROM DATABASE", user_record)
+    # #Issue a JWT
+    # jwt_token_pair = obtain_jwt_pair(str(user_record["id"]),user_record["idp"], user_record["alias"]) 
+    # print("JWT OBTAINED", jwt_token_pair)
 
-    # database logic here
-    user_record = await get_or_add_user(str(user_profile["id"]),provider,None,user_profile['email'])
-    if not user_record:
-        raise HTTPException(
-            status_code=400,
-            detail="Failed to create the user"
-        )
-    print("USER FROM DATABASE", user_record)
-    #Issue a JWT
-    jwt_token_pair = obtain_jwt_pair(str(user_record["id"]),user_record["idp"], user_record["alias"]) 
-    print("JWT OBTAINED", jwt_token_pair)
-
-    # response = TokenSchema(
-    #     access_token = jwt_token_pair['access'],
-    #     refresh_token = jwt_token_pair['refresh'],
+    # response = RedirectResponse(
+    #     url=os.environ.get("CLIENT_REDIRECT_URI"),
+    #     status_code=302
     # )
 
-    response = RedirectResponse(
-        url=os.environ.get("CLIENT_REDIRECT_URI"),
-        status_code=302
-    )
+    # print("RESPONSE OBJECT", os.environ.get("CLIENT_REDIRECT_URI"))
 
-    print("RESPONSE OBJECT", os.environ.get("CLIENT_REDIRECT_URI"))
+    # # Access token cookie
+    # response.set_cookie(
+    #     key="access_token",
+    #     value=jwt_token_pair["access"],
+    #     httponly=True,
+    #     secure=True,          # HTTPS only
+    #     samesite="none",
+    #     max_age=ACCESS_TOKEN_LIFETIME,
+    # )
 
-    # Access token cookie
-    response.set_cookie(
-        key="access_token",
-        value=jwt_token_pair["access"],
-        httponly=True,
-        secure=True,          # HTTPS only
-        samesite="none",
-        max_age=ACCESS_TOKEN_LIFETIME,
-    )
+    # # Refresh token cookie
+    # response.set_cookie(
+    #     key="refresh_token",
+    #     value=jwt_token_pair["refresh"],
+    #     httponly=True,
+    #     secure=True,
+    #     samesite="none",
+    #     max_age=REFRESH_TOKEN_LIFETIME, 
+    # )
 
-    # Refresh token cookie
-    response.set_cookie(
-        key="refresh_token",
-        value=jwt_token_pair["refresh"],
-        httponly=True,
-        secure=True,
-        samesite="none",
-        max_age=REFRESH_TOKEN_LIFETIME, 
-    )
-
-    return response
+    # return response
 
 @router.get("/session", response_model=UserProfileSchema)
 async def get_session(token_data = Depends(validate_jwt_cookie)):
