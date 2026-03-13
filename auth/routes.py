@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Request, Depends
+from fastapi import APIRouter, HTTPException, Request, Depends, Response
 from fastapi.responses import RedirectResponse
 from providers.provider_registry import get_provider
 from data.db_actions import get_or_add_user
@@ -24,6 +24,7 @@ router = APIRouter()
 # Go to project root (adjust parents[n] if needed)
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
+
 @router.get("/auth/providers", response_model = List[ProviderSchema])
 async def get_providers():
 
@@ -32,7 +33,12 @@ async def get_providers():
     with open(providers_path, "r", encoding="utf-8") as f:
         providers = json.load(f)
 
-    provider_list = [ ProviderSchema(id=p['id'], name=p['name']) for p in providers]
+    provider_list = [ ProviderSchema(
+        id=p['id'], 
+        name=p['name'],
+        logo= f"{os.environ.get("BACKEND_REDIRECT_URI")}{p['logo']}",
+        login= f"{await get_provider(p["id"]).get_auth_url()}"
+    ) for p in providers]
     return provider_list
 
 @router.get("/auth/{provider}/login")
@@ -53,76 +59,80 @@ async def login(provider: str):
     return {"auth_url": await idp.get_auth_url()}
 
 
-@router.get("/{provider}/callback", response_model=TokenSchema)
-async def auth_callback(provider: str, code: str):
+# @router.get("/{provider}/callback", response_model=TokenSchema)
+# async def auth_callback(provider: str, code: str):
 
-    idp = get_provider(provider)
+#     idp = get_provider(provider)
 
-    access_token = await idp.exchange_code(code)
+#     access_token = await idp.exchange_code(code)
 
-    #access_token = "MTQ4MDA3NDQ2NTExNDMyOTI5MQ.uv6PGkQHeeSpcUUhAv23WRQwqF4WON"
+#     #access_token = "MTQ4MDA3NDQ2NTExNDMyOTI5MQ.uv6PGkQHeeSpcUUhAv23WRQwqF4WON"
 
-    user_profile = await idp.get_user_info(access_token)
+#     user_profile = await idp.get_user_info(access_token)
 
 
-    # print("DISCORD PROFILE ", user_profile, access_token)
+#     # print("DISCORD PROFILE ", user_profile, access_token)
 
-    # user_profile = {
-    #     'id': '112023773581453384433', 
-    #     'email': 'cbri4nt@gmail.com', 
-    #     'verified_email': True, 
-    #     'name': 'Chris Briant', 
-    #     'given_name': 'Chris', 
-    #     'family_name': 'Briant', 
-    #     'picture': 'https://lh3.googleusercontent.com/a/ACg8ocIf1fisJjPwLJ6e9uMk_Q46nWohbOwoeP7Gw4b3EwQw0E15fA=s96-c'
-    # }
+#     # user_profile = {
+#     #     'id': '112023773581453384433', 
+#     #     'email': 'cbri4nt@gmail.com', 
+#     #     'verified_email': True, 
+#     #     'name': 'Chris Briant', 
+#     #     'given_name': 'Chris', 
+#     #     'family_name': 'Briant', 
+#     #     'picture': 'https://lh3.googleusercontent.com/a/ACg8ocIf1fisJjPwLJ6e9uMk_Q46nWohbOwoeP7Gw4b3EwQw0E15fA=s96-c'
+#     # }
 
-    # print("USER PROFILE RETRIEVED", user_profile)
+#     # print("USER PROFILE RETRIEVED", user_profile)
 
-    # database logic here
-    user_record = await get_or_add_user(user_profile["id"],provider,None,user_profile['email'])
-    if not user_record:
-        raise HTTPException(
-            status_code=400,
-            detail="Failed to create the user"
-        )
-    print("USER FROM DATABASE", user_record)
-    #Issue a JWT
-    jwt_token_pair = obtain_jwt_pair(user_record["id"],user_record["idp"], user_record["alias"]) 
-    print("JWT OBTAINED", jwt_token_pair)
+#     # database logic here
+#     user_record = await get_or_add_user(user_profile["id"],provider,None,user_profile['email'])
+#     if not user_record:
+#         raise HTTPException(
+#             status_code=400,
+#             detail="Failed to create the user"
+#         )
+#     print("USER FROM DATABASE", user_record)
+#     #Issue a JWT
+#     jwt_token_pair = obtain_jwt_pair(user_record["id"],user_record["idp"], user_record["alias"]) 
+#     print("JWT OBTAINED", jwt_token_pair)
 
-    response = TokenSchema(
-        access_token = jwt_token_pair['access'],
-        refresh_token = jwt_token_pair['refresh'],
-    )
+#     response = TokenSchema(
+#         access_token = jwt_token_pair['access'],
+#         refresh_token = jwt_token_pair['refresh'],
+#     )
 
-    return response
+#     return response
 
-#TEST ROUTE FOR IP INFORMATION
-@router.get("/ip-info")
-async def ip_info(request: Request):
+# #TEST ROUTE FOR IP INFORMATION
+# @router.get("/ip-info")
+# async def ip_info(request: Request):
 
-    ip_address = request.client.host
-    user_agent = request.headers.get("user-agent")
+#     ip_address = request.client.host
+#     user_agent = request.headers.get("user-agent")
 
-    return {
-        "ip": ip_address,
-        "user_agent": user_agent
-    }
+#     return {
+#         "ip": ip_address,
+#         "user_agent": user_agent
+#     }
 
-@router.get("/{provider}/callbackwithredirect", response_model=TokenSchema)
+@router.get("/{provider}/callback", response_model=str)
 async def auth_callback_with_redirect(provider: str, code: str):
 
     idp = get_provider(provider)
 
     access_token = await idp.exchange_code(code)
 
+
+
     #access_token = "MTQ4MDA3NDQ2NTExNDMyOTI5MQ.uv6PGkQHeeSpcUUhAv23WRQwqF4WON"
 
     user_profile = await idp.get_user_info(access_token)
 
+
+
     # database logic here
-    user_record = await get_or_add_user(user_profile["id"],provider,None,user_profile['email'])
+    user_record = await get_or_add_user(str(user_profile["id"]),provider,None,user_profile['email'])
     if not user_record:
         raise HTTPException(
             status_code=400,
@@ -130,7 +140,7 @@ async def auth_callback_with_redirect(provider: str, code: str):
         )
     print("USER FROM DATABASE", user_record)
     #Issue a JWT
-    jwt_token_pair = obtain_jwt_pair(user_record["id"],user_record["idp"], user_record["alias"]) 
+    jwt_token_pair = obtain_jwt_pair(str(user_record["id"]),user_record["idp"], user_record["alias"]) 
     print("JWT OBTAINED", jwt_token_pair)
 
     # response = TokenSchema(
@@ -176,6 +186,29 @@ async def get_session(token_data = Depends(validate_jwt_cookie)):
         alias=token_data["alias"]
     )
     return response
+
+@router.post("/logout")
+def logout(response: Response):
+    """
+        Logs out the user by clearing the Cookies
+    """
+    # response.delete_cookie("access_token")
+    # response.delete_cookie("refresh_token")
+
+    response.delete_cookie(
+        key="access_token",
+        path="/",
+        secure=True,
+        samesite="none",
+    )
+
+    response.delete_cookie(
+        key="refresh_token",
+        path="/",
+        secure=True,
+        samesite="none",
+    )
+    return {"status": "logged_out"}
 
 
 @router.get("/issuejwt", response_model=TokenSchema)
@@ -223,56 +256,92 @@ async def issue_jwt_redirect(id: str, idp: str, alias: str):
 
     return response
 
-@router.get("/refresh", response_model=TokenSchema)
-async def refresh_jwt (request:Request):
+# @router.get("/refresh", response_model=TokenSchema)
+# async def refresh_jwt (request:Request):
+#     refresh_token = request.cookies.get("refresh_token")
+
+#     try:
+#         print("HERE IS THE REFRESH", request.cookies.get("refresh_token"))
+#         jwt_token_pair = refresh_jwt_pair(refresh_token)
+#     except RefreshTokenExpiredError as ex_err:
+#         raise HTTPException(
+#             status_code=401,
+#             detail="Refresh token has expired"
+#         )
+#     except InvalidRefreshTokenError as invalid_token_err:
+#         raise HTTPException(
+#             status_code=401,
+#             detail="Refresh token is invalid"
+#         )
+#     except Exception as e:
+#         print("AN ERROR OCCURRED REFRESHING THE TOKEN", e)
+#         raise HTTPException(
+#             status_code=401,
+#             detail="Refresh token is invalid"
+#         )
+
+#     response = RedirectResponse(
+#         url=os.environ.get("CLIENT_REDIRECT_URI"),
+#         status_code=302
+#     )
+
+#     # Access token cookie
+#     response.set_cookie(
+#         key="access_token",
+#         value=jwt_token_pair["access"],
+#         httponly=True,
+#         secure=True,          # HTTPS only
+#         samesite="none",
+#         max_age=ACCESS_TOKEN_LIFETIME
+#     )
+
+#     # Refresh token cookie
+#     response.set_cookie(
+#         key="refresh_token",
+#         value=jwt_token_pair["refresh"],
+#         httponly=True,
+#         secure=True,
+#         samesite="none",
+#         max_age=REFRESH_TOKEN_LIFETIME
+#     )
+
+#     return response
+
+@router.post("/refresh")
+async def refresh_jwt(request: Request, response: Response):
+
     refresh_token = request.cookies.get("refresh_token")
 
     try:
-        print("HERE IS THE REFRESH", request.cookies.get("refresh_token"))
         jwt_token_pair = refresh_jwt_pair(refresh_token)
-    except RefreshTokenExpiredError as ex_err:
-        raise HTTPException(
-            status_code=401,
-            detail="Refresh token has expired"
-        )
-    except InvalidRefreshTokenError as invalid_token_err:
-        raise HTTPException(
-            status_code=401,
-            detail="Refresh token is invalid"
-        )
-    except Exception as e:
-        print("AN ERROR OCCURRED REFRESHING THE TOKEN", e)
-        raise HTTPException(
-            status_code=401,
-            detail="Refresh token is invalid"
-        )
 
-    response = RedirectResponse(
-        url=os.environ.get("CLIENT_REDIRECT_URI"),
-        status_code=302
-    )
+    except RefreshTokenExpiredError:
+        raise HTTPException(status_code=401, detail="Refresh token expired")
 
-    # Access token cookie
+    except InvalidRefreshTokenError:
+        raise HTTPException(status_code=401, detail="Refresh token invalid")
+
+    # Set new cookies
     response.set_cookie(
         key="access_token",
         value=jwt_token_pair["access"],
         httponly=True,
-        secure=True,          # HTTPS only
-        samesite="lax",
+        secure=True,
+        samesite="none",
         max_age=ACCESS_TOKEN_LIFETIME
     )
 
-    # Refresh token cookie
     response.set_cookie(
         key="refresh_token",
         value=jwt_token_pair["refresh"],
         httponly=True,
         secure=True,
-        samesite="lax",
+        samesite="none",
         max_age=REFRESH_TOKEN_LIFETIME
     )
 
-    return response
+    return {"status": "refreshed"}
+
 
 
 @router.post("/refreshtoken", response_model=TokenSchema)

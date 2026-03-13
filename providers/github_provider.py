@@ -5,37 +5,38 @@ from .base_provider import BaseProvider
 from urllib.parse import urlencode
 
 
-class DiscordProvider(BaseProvider):
+
+class GitHubProvider(BaseProvider):
 
     async def get_auth_url(self):
-        base_url = "https://discord.com/oauth2/authorize"
+        print("STATE", self.state)
+
+        base_url = "https://github.com/login/oauth/authorize"
 
         params = {
-            "client_id": os.environ.get("CLIENT_ID_DISCORD"),
-            #"redirect_uri": os.environ.get("BACKEND_REDIRECT_URI"),
-            "redirect_uri": f"{os.environ.get("BACKEND_REDIRECT_URI")}/auth/discord/callback",
-            "response_type": "code",
-            "scope": "openid email identify",
+            "client_id": os.environ.get("CLIENT_ID_GITHUB"),
+            "redirect_uri": f"{os.environ.get("BACKEND_REDIRECT_URI")}/auth/github/callback",
+            "scope": "read:user user:email",
+            "state" : self.state
         }
 
         return f"{base_url}?{urlencode(params)}"
 
     async def exchange_code(self, code: str):
-        url = "https://discord.com/api/oauth2/token"
+        url = "https://github.com/login/oauth/access_token"
 
         payload = {
-            'grant_type': 'authorization_code',
-            'code': code,
-            'redirect_uri': f"{os.environ.get("BACKEND_REDIRECT_URI")}/auth/discord/callback"
+            "client_id": os.environ.get("CLIENT_ID_GITHUB"),
+            "client_secret": os.environ.get("CLIENT_SECRET_GITHUB"),
+            "code": code,
+            "redirect_uri": f"{os.environ.get('BACKEND_REDIRECT_URI')}/auth/github/callback",
+            "state": self.state  # optional but recommended if you sent it in the auth request
         }
         headers = {
-            'Content-Type': 'application/x-www-form-urlencoded'
+            "Accept": "application/json"  # ensures GitHub returns JSON
         }
 
-        CLIENT_SECRET = os.environ.get("CLIENT_SECRET_DISCORD")
-        CLIENT_ID = os.environ.get("CLIENT_ID_DISCORD")
-
-        response = requests.request("POST",url, data=payload, headers=headers, auth=(CLIENT_ID, CLIENT_SECRET))
+        response = requests.request("POST",url, data=payload, headers=headers)
         
         if response.status_code != 200:
             print("FAILED", response.text, payload)
@@ -49,7 +50,7 @@ class DiscordProvider(BaseProvider):
         
     async def get_user_info(self, access_token: str):
         # 1. Define the API endpoint for the current user
-        API_ENDPOINT = 'https://discord.com/api/v10/users/@me'
+        API_ENDPOINT = 'https://api.github.com/user'
         
         # 2. Construct the Authorization header
         # NOTE: It is 'Bearer' for OAuth2 User Tokens and 'Bot' for Bot Tokens.
@@ -69,12 +70,9 @@ class DiscordProvider(BaseProvider):
             if response.status_code == 200:
                 # Token is valid! Parse the JSON response.
                 user_data = response.json()
-                user_id = user_data.get('id')
-                username = user_data.get('username')
                 
                 print("✅ Token is Valid.")
-                print(f"User ID: {user_id}")
-                print(f"Username: {username}")
+                print(f"User Data: {user_data}")
                 
                 
             elif response.status_code == 401:

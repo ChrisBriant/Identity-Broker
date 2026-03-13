@@ -11,6 +11,8 @@ class TokenSchema(BaseModel):
 class ProviderSchema(BaseModel):
     id : str
     name : str
+    logo : str
+    login : str
 
 class UserProfileSchema(BaseModel):
     id : int

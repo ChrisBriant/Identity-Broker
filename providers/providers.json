@@ -1,4 +1,5 @@
 [
-  {"id": "google", "name": "Google"},
-  {"id": "discord", "name": "Discord"}
+  {"id": "google", "name": "Google", "logo" : "/static/idp/Google__G__logo.svg"},
+  {"id": "discord", "name": "Discord", "logo" : "/static/idp/Discord-Symbol-Blurple.png"},
+  {"id": "github", "name": "GitHub", "logo" : "/static/idp/GitHub_Invertocat_Black_Clearspace.png"}
 ]
