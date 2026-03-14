@@ -6,36 +6,39 @@ from urllib.parse import urlencode
 
 
 
-class GitHubProvider(BaseProvider):
+class LinkedInProvider(BaseProvider):
 
-    async def get_auth_url(self, state : str):
+    async def get_auth_url(self, state : str) :
 
-        base_url = "https://github.com/login/oauth/authorize"
+        base_url = "https://www.linkedin.com/oauth/v2/authorization"
 
         params = {
-            "client_id": os.environ.get("CLIENT_ID_GITHUB"),
-            "redirect_uri": f"{os.environ.get("BACKEND_REDIRECT_URI")}/auth/github/callback",
-            "scope": "read:user user:email",
-            "state" : state
+            "client_id": os.environ.get("CLIENT_ID_LINKEDIN"),
+            "response_type": "code",
+            "redirect_uri": f"{os.environ.get("BACKEND_REDIRECT_URI")}/auth/linkedin/callback",
+            "redirect_uri": "https://localhost:8000/auth/linkedin/callback",
+            "scope": "openid profile email",
+            "state": state
         }
 
         return f"{base_url}?{urlencode(params)}"
 
-    async def exchange_code(self, code: str, state : str):
-        url = "https://github.com/login/oauth/access_token"
+    async def exchange_code(self, code: str, state: str | None):
+        url = "https://www.linkedin.com/oauth/v2/accessToken"
 
         payload = {
-            "client_id": os.environ.get("CLIENT_ID_GITHUB"),
-            "client_secret": os.environ.get("CLIENT_SECRET_GITHUB"),
-            "code": code,
-            "redirect_uri": f"{os.environ.get('BACKEND_REDIRECT_URI')}/auth/github/callback",
-            "state": state
-        }
-        headers = {
-            "Accept": "application/json"  # ensures GitHub returns JSON
+            "grant_type": "authorization_code",
+            "code": code,  # the code you received from the auth redirect
+            "redirect_uri": f"{os.environ.get('BACKEND_REDIRECT_URI')}/auth/linkedin/callback",
+            "client_id": os.environ.get("CLIENT_ID_LINKEDIN"),
+            "client_secret": os.environ.get("CLIENT_SECRET_LINKEDIN")
         }
 
-        response = requests.request("POST",url, data=payload, headers=headers)
+        headers = {
+            "Content-Type": "application/x-www-form-urlencoded"
+        }
+
+        response = requests.post(url, data=payload, headers=headers)
         
         if response.status_code != 200:
             print("FAILED", response.text, payload)
@@ -43,13 +46,10 @@ class GitHubProvider(BaseProvider):
         response_data =  response.json()
         return response_data['access_token']
         
-
-
- 
-        
+       
     async def get_user_info(self, access_token: str):
         # 1. Define the API endpoint for the current user
-        API_ENDPOINT = 'https://api.github.com/user'
+        API_ENDPOINT = "https://api.linkedin.com/v2/userinfo"
         
         # 2. Construct the Authorization header
         # NOTE: It is 'Bearer' for OAuth2 User Tokens and 'Bot' for Bot Tokens.
@@ -64,6 +64,7 @@ class GitHubProvider(BaseProvider):
         try:
             # 3. Make the GET request to the Discord API
             response = requests.get(API_ENDPOINT, headers=headers)
+            user_profile = None
             
             # 4. Check the HTTP status code
             if response.status_code == 200:
@@ -72,7 +73,10 @@ class GitHubProvider(BaseProvider):
                 
                 print("✅ Token is Valid.")
                 print(f"User Data: {user_data}")
-                
+                user_profile = {
+                    "id" : user_data.get("sub"),
+                    "email" : user_data.get("email")
+                }
                 
             elif response.status_code == 401:
                 # Token is invalid, expired, or revoked
@@ -88,5 +92,6 @@ class GitHubProvider(BaseProvider):
                 raise HTTPException(status_code=response.status_code, detail="An error occurred obtaining the profile.")
         except Exception as e:
             print("AN ERROR OCCURRED VALIDATING THE TOKEN", e)
-        return response.json()
+            raise HTTPException(status_code=400, detail="An error occurred obtaining the profile.")
+        return user_profile
     

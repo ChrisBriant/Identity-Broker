@@ -1,5 +1,8 @@
 [
   {"id": "google", "name": "Google", "logo" : "/static/idp/Google__G__logo.svg"},
   {"id": "discord", "name": "Discord", "logo" : "/static/idp/Discord-Symbol-Blurple.png"},
-  {"id": "github", "name": "GitHub", "logo" : "/static/idp/GitHub_Invertocat_Black_Clearspace.png"}
+  {"id": "github", "name": "GitHub", "logo" : "/static/idp/GitHub_Invertocat_Black_Clearspace.png"},
+  {"id": "linkedin", "name": "LinkedIn", "logo" : "/static/idp/LI-In-Bug.png"},
+  {"id": "auth0", "name": "Auth0", "logo" : "/static/idp/auth0-icon-logo.svg"}
+
 ]

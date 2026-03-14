@@ -1,7 +1,8 @@
-from fastapi import APIRouter, HTTPException, Request, Depends, Response
+from fastapi import APIRouter, HTTPException, Request, Depends, Response, Query
 from fastapi.responses import RedirectResponse
 from providers.provider_registry import get_provider
 from data.db_actions import get_or_add_user
+import uuid
 from .token import (
     obtain_jwt_token, 
     obtain_jwt_pair, 
@@ -25,8 +26,12 @@ router = APIRouter()
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 
-@router.get("/auth/providers", response_model = List[ProviderSchema])
+@router.get("/providers", response_model = List[ProviderSchema])
 async def get_providers():
+    """
+        Helper which lists the providers with a media link and login link.
+        It reads from the providers.json file and creates the response object
+    """
 
     providers_path = PROJECT_ROOT / "providers" / "providers.json"
 
@@ -37,26 +42,53 @@ async def get_providers():
         id=p['id'], 
         name=p['name'],
         logo= f"{os.environ.get("BACKEND_REDIRECT_URI")}{p['logo']}",
-        login= f"{await get_provider(p["id"]).get_auth_url()}"
+        login= f"{os.environ.get("BACKEND_REDIRECT_URI")}/auth/{p['id']}/login"
     ) for p in providers]
     return provider_list
 
-@router.get("/auth/{provider}/login")
+# @router.get("/auth/{provider}/login")
+# async def login(provider: str):
+#     try:
+#         idp = get_provider(provider)
+#     except ValueError:
+#         raise HTTPException(
+#             status_code=404,
+#             detail="Provider not found"
+#         )
+#     except Exception as e:
+#         #Catch all
+#         raise HTTPException(
+#             status_code=400,
+#             detail=f"An error occurred retrieving the provider {e}"
+#         ) 
+#     return {"auth_url": await idp.get_auth_url()}
+
+@router.get("/{provider}/login")
 async def login(provider: str):
-    try:
-        idp = get_provider(provider)
-    except ValueError:
-        raise HTTPException(
-            status_code=404,
-            detail="Provider not found"
-        )
-    except Exception as e:
-        #Catch all
-        raise HTTPException(
-            status_code=400,
-            detail=f"An error occurred retrieving the provider {e}"
-        ) 
-    return {"auth_url": await idp.get_auth_url()}
+    """
+        Performs the login to the IDP using their authorisation endpoint. It then redirects to the token exchange endpoint.
+        Example: https://localhost:8000/auth/linkedin/login
+    """
+
+    idp = get_provider(provider)
+
+    # Generate secure state
+    state = str(uuid.uuid4())
+    auth_url = await idp.get_auth_url(state)
+
+    # Redirect browser immediately
+    response = RedirectResponse(auth_url)
+
+    # Store state in a cookie
+    response.set_cookie(
+        key=f"oauth_state_{provider}",
+        value=state,
+        httponly=True,
+        secure=True,
+        samesite="none"
+    )
+
+    return response
 
 
 # @router.get("/{provider}/callback", response_model=TokenSchema)
@@ -117,60 +149,78 @@ async def login(provider: str):
 #     }
 
 @router.get("/{provider}/callback", response_model=str)
-async def auth_callback_with_redirect(provider: str, code: str):
+async def auth_callback_with_redirect(request: Request, provider: str, code: str, state: str | None = Query(None)):
+    """
+        Handles the callback from the IDP
+        1. Takes the code from the payload and exchanges it for a token
+        2. The token is verified and the user profile data returned
+        3. User profile data is stored in the database
+        4. JWT token is issued and set within the session cookie
+    """
+
 
     idp = get_provider(provider)
 
-    access_token = await idp.exchange_code(code)
+    #Handle the state if it is in the payload
+    if state:
+        stored_state = request.cookies.get(f"oauth_state_{provider}")
+        print("STATES", stored_state, state)
+        if stored_state != state:
+            raise HTTPException(status=401,message="Invalid state")
+
+    #State is passed in as some providers need to pass it to the token endpoint
+    access_token = await idp.exchange_code(code, state)
 
 
 
     #access_token = "MTQ4MDA3NDQ2NTExNDMyOTI5MQ.uv6PGkQHeeSpcUUhAv23WRQwqF4WON"
-
+    #Verify the token and return the user profile data
     user_profile = await idp.get_user_info(access_token)
 
-    print("USER PROFILE", user_profile)
+    # print("USER PROFILE", user_profile)
 
-    # # database logic here
-    # user_record = await get_or_add_user(str(user_profile["id"]),provider,None,user_profile['email'])
-    # if not user_record:
-    #     raise HTTPException(
-    #         status_code=400,
-    #         detail="Failed to create the user"
-    #     )
-    # print("USER FROM DATABASE", user_record)
-    # #Issue a JWT
-    # jwt_token_pair = obtain_jwt_pair(str(user_record["id"]),user_record["idp"], user_record["alias"]) 
-    # print("JWT OBTAINED", jwt_token_pair)
+    # return "Hello"
 
-    # response = RedirectResponse(
-    #     url=os.environ.get("CLIENT_REDIRECT_URI"),
-    #     status_code=302
-    # )
+    # database logic here
+    user_record = await get_or_add_user(str(user_profile["id"]),provider,None,user_profile['email'])
+    if not user_record:
+        raise HTTPException(
+            status_code=400,
+            detail="Failed to create the user"
+        )
+    print("USER FROM DATABASE", user_record)
+    #Issue a JWT
+    jwt_token_pair = obtain_jwt_pair(str(user_record["id"]),user_record["idp"], user_record["alias"]) 
+    print("JWT OBTAINED", jwt_token_pair)
 
-    # print("RESPONSE OBJECT", os.environ.get("CLIENT_REDIRECT_URI"))
+    response = RedirectResponse(
+        url=os.environ.get("CLIENT_REDIRECT_URI"),
+        status_code=302
+    )
 
-    # # Access token cookie
-    # response.set_cookie(
-    #     key="access_token",
-    #     value=jwt_token_pair["access"],
-    #     httponly=True,
-    #     secure=True,          # HTTPS only
-    #     samesite="none",
-    #     max_age=ACCESS_TOKEN_LIFETIME,
-    # )
+    print("RESPONSE OBJECT", os.environ.get("CLIENT_REDIRECT_URI"))
 
-    # # Refresh token cookie
-    # response.set_cookie(
-    #     key="refresh_token",
-    #     value=jwt_token_pair["refresh"],
-    #     httponly=True,
-    #     secure=True,
-    #     samesite="none",
-    #     max_age=REFRESH_TOKEN_LIFETIME, 
-    # )
+    # Access token cookie
+    response.set_cookie(
+        key="access_token",
+        value=jwt_token_pair["access"],
+        httponly=True,
+        secure=True,          # HTTPS only
+        samesite="none",
+        max_age=ACCESS_TOKEN_LIFETIME,
+    )
 
-    # return response
+    # Refresh token cookie
+    response.set_cookie(
+        key="refresh_token",
+        value=jwt_token_pair["refresh"],
+        httponly=True,
+        secure=True,
+        samesite="none",
+        max_age=REFRESH_TOKEN_LIFETIME, 
+    )
+
+    return response
 
 @router.get("/session", response_model=UserProfileSchema)
 async def get_session(token_data = Depends(validate_jwt_cookie)):

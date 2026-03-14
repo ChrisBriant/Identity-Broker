@@ -7,7 +7,7 @@ from urllib.parse import urlencode
 
 class DiscordProvider(BaseProvider):
 
-    async def get_auth_url(self):
+    async def get_auth_url(self, state : str | None):
         base_url = "https://discord.com/oauth2/authorize"
 
         params = {
@@ -20,7 +20,7 @@ class DiscordProvider(BaseProvider):
 
         return f"{base_url}?{urlencode(params)}"
 
-    async def exchange_code(self, code: str):
+    async def exchange_code(self, code: str, state : str | None):
         url = "https://discord.com/api/oauth2/token"
 
         payload = {

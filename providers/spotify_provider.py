@@ -8,7 +8,7 @@ from urllib.parse import urlencode
 
 class SpotifyProvider(BaseProvider):
 
-    async def get_auth_url(self):
+    async def get_auth_url(self, state : str | None):
 
         base_url = "https://accounts.spotify.com/authorize"
 
@@ -22,7 +22,7 @@ class SpotifyProvider(BaseProvider):
 
         return f"{base_url}?{urlencode(params)}"
 
-    async def exchange_code(self, code: str):
+    async def exchange_code(self, code: str,state : str | None):
         url = "https://accounts.spotify.com/api/token"
 
         payload = {

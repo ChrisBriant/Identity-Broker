@@ -7,7 +7,7 @@ from urllib.parse import urlencode
 
 class GoogleProvider(BaseProvider):
 
-    async def get_auth_url(self):
+    async def get_auth_url(self, state : str | None):
         base_url = "https://accounts.google.com/o/oauth2/v2/auth"
 
         params = {
@@ -22,7 +22,7 @@ class GoogleProvider(BaseProvider):
 
         return f"{base_url}?{urlencode(params)}"
 
-    async def exchange_code(self, code: str):
+    async def exchange_code(self, code: str, state : str | None):
 
         url = "https://oauth2.googleapis.com/token"
 
