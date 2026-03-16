@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, computed_field
 from typing import Optional
 from datetime import datetime
 from typing import List
@@ -18,6 +18,32 @@ class UserProfileSchema(BaseModel):
     id : int
     idp : str
     alias : str
+
+class UserSchema(BaseModel):
+    id: int
+    alias: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+class FeedbackSchema(BaseModel):
+    id : int 
+    # user_id : int
+    message : str
+    resolved : bool
+    created_at : datetime
+    updated_at : datetime
+    user: UserSchema
+
+    model_config = ConfigDict(from_attributes=True)
+
+class AuthCodeSchema(BaseModel):
+    auth_code : str
+
+
+    # @computed_field
+    # @property
+    # def alias(self) -> str:
+    #     return self.user.alias
 
 # class WordWithoutSelectionSchema(BaseModel):
 #     id: int
