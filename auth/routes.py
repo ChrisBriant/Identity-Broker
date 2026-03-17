@@ -247,32 +247,43 @@ async def auth_callback_with_redirect(request: Request, provider: str, code: str
     #Set the redirect URI depending on whether it exists in the cookie set to default if not in cookie
     response_redirect_uri = redirect_uri if redirect_uri else os.environ.get("CLIENT_REDIRECT_URI")
 
-    response = RedirectResponse(
-        url=response_redirect_uri,
-        status_code=302
-    )
+
 
     print("RESPONSE OBJECT", os.environ.get("CLIENT_REDIRECT_URI"))
 
-    # Access token cookie
-    response.set_cookie(
-        key="access_token",
-        value=jwt_token_pair["access"],
-        httponly=True,
-        secure=True,          # HTTPS only
-        samesite="none",
-        max_age=ACCESS_TOKEN_LIFETIME,
-    )
+    #Divert flow depending on whether delivering tokens in cookie or sending auth code
+    if set_cookie:
+        response = RedirectResponse(
+            url=response_redirect_uri,
+            status_code=302
+        )
+        # Access token cookie
+        response.set_cookie(
+            key="access_token",
+            value=jwt_token_pair["access"],
+            httponly=True,
+            secure=True,          # HTTPS only
+            samesite="none",
+            max_age=ACCESS_TOKEN_LIFETIME,
+        )
 
-    # Refresh token cookie
-    response.set_cookie(
-        key="refresh_token",
-        value=jwt_token_pair["refresh"],
-        httponly=True,
-        secure=True,
-        samesite="none",
-        max_age=REFRESH_TOKEN_LIFETIME, 
-    )
+        # Refresh token cookie
+        response.set_cookie(
+            key="refresh_token",
+            value=jwt_token_pair["refresh"],
+            httponly=True,
+            secure=True,
+            samesite="none",
+            max_age=REFRESH_TOKEN_LIFETIME, 
+        )
+    else :
+        print("SENDNG AUTH CODE")
+        #Generate an auth code
+        auth_code = await create_auth_code(user_record["id"])
+        response = RedirectResponse(
+            url= f"{response_redirect_uri}?code={auth_code.code}",
+            status_code=302
+        )
 
     return response
 
