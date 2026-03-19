@@ -36,6 +36,9 @@ class FeedbackSchema(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
+class FeedbackInputSchema(BaseModel):
+    message : str
+
 class AuthCodeSchema(BaseModel):
     auth_code : str
 

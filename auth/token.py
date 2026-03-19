@@ -9,7 +9,7 @@ from typing import Optional
 # Settings for JWT
 #SECRET_KEY = os.environ.get("SECRET_KEY")  # Use a secure key from your Django settings
 ALGORITHM = "HS256"             # Use HS256 or any preferred algorithm
-ACCESS_TOKEN_LIFETIME = 10      # Token lifetime in seconds
+ACCESS_TOKEN_LIFETIME = 60      # Token lifetime in seconds
 REFRESH_TOKEN_LIFETIME = 120
 REFRESH_TOKEN_LIFETIME_HOURS=2
 REFRESH_TOKEN_LIFETIME_DAYS=30

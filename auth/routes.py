@@ -28,6 +28,7 @@ from data.shemas import (
     ProviderSchema, 
     UserProfileSchema, 
     FeedbackSchema,
+    FeedbackInputSchema,
     AuthCodeSchema,
     RefreshTokenSchema,
 )
@@ -302,14 +303,14 @@ async def get_session(token_data = Depends(validate_jwt)):
 
 
 @router.post("/postfeedback", response_model=FeedbackSchema)
-async def post_feedback(feedback : str, token_data = Depends(validate_jwt_cookie)):
+async def post_feedback(feedback : FeedbackInputSchema, token_data = Depends(validate_jwt)):
     """
         Allow authenticated users to post feedback
 
     """
     if token_data:
         #Sanitize the feedback text sent by the user
-        cleaned_feedback = bleach.clean(feedback, tags=[], attributes={}, strip=True)
+        cleaned_feedback = bleach.clean(feedback.message, tags=[], attributes={}, strip=True)
         #Add sanitized feedback to the database
         feedback_data = await add_feedback(token_data['user_id'], cleaned_feedback)
         feedback_response = FeedbackSchema.model_validate(feedback_data)
