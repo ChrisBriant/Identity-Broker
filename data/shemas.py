@@ -39,6 +39,8 @@ class FeedbackSchema(BaseModel):
 class AuthCodeSchema(BaseModel):
     auth_code : str
 
+class RefreshTokenSchema(BaseModel):
+    token : str | None
 
     # @computed_field
     # @property

@@ -1,4 +1,5 @@
 from fastapi import APIRouter, HTTPException, Request, Depends, Response, Query
+from typing import Optional
 from fastapi.responses import RedirectResponse
 from providers.provider_registry import get_provider
 from data.db_actions import (
@@ -15,7 +16,8 @@ from .token import (
     obtain_jwt_pair, 
     refresh_jwt_pair, 
     validate_jwt_token, 
-    validate_jwt_cookie, 
+    validate_jwt_cookie,
+    validate_jwt, 
     RefreshTokenExpiredError, 
     InvalidRefreshTokenError,
     ACCESS_TOKEN_LIFETIME,
@@ -27,6 +29,7 @@ from data.shemas import (
     UserProfileSchema, 
     FeedbackSchema,
     AuthCodeSchema,
+    RefreshTokenSchema,
 )
 from typing import List
 from pathlib import Path
@@ -288,7 +291,7 @@ async def auth_callback_with_redirect(request: Request, provider: str, code: str
     return response
 
 @router.get("/session", response_model=UserProfileSchema)
-async def get_session(token_data = Depends(validate_jwt_cookie)):
+async def get_session(token_data = Depends(validate_jwt)):
     print("TOKEN DATA", token_data)
     response = UserProfileSchema(
         id=token_data["user_id"],
@@ -450,42 +453,57 @@ def logout(response: Response):
 #     return response
 
 @router.post("/refresh")
-async def refresh_jwt(request: Request, response: Response):
+async def refresh_jwt(request: Request, response: Response, refresh: Optional[RefreshTokenSchema], set_cookie : bool = Query(True)):
     """
         Takes the refresh token and issues a new token pair and sets the session cookie
     """
 
-    refresh_token = request.cookies.get("refresh_token")
-
+    # Fallback to cookie (browser clients)
+    if not refresh.token:
+        print("HERE")
+        refresh_token = request.cookies.get("refresh_token")
+    else:
+        print("GETTING REFRESH TOKEN")
+        refresh_token = refresh.token
     try:
         jwt_token_pair = refresh_jwt_pair(refresh_token)
 
-    except RefreshTokenExpiredError:
+    except RefreshTokenExpiredError as e:
+        print("Refresh token expired", e)
         raise HTTPException(status_code=401, detail="Refresh token expired")
 
-    except InvalidRefreshTokenError:
+    except InvalidRefreshTokenError as e:
+        print("Refresh token invalid", e)
         raise HTTPException(status_code=401, detail="Refresh token invalid")
 
     # Set new cookies
-    response.set_cookie(
-        key="access_token",
-        value=jwt_token_pair["access"],
-        httponly=True,
-        secure=True,
-        samesite="none",
-        max_age=ACCESS_TOKEN_LIFETIME
+    if set_cookie:
+        response.set_cookie(
+            key="access_token",
+            value=jwt_token_pair["access"],
+            httponly=True,
+            secure=True,
+            samesite="none",
+            max_age=ACCESS_TOKEN_LIFETIME
+        )
+
+        response.set_cookie(
+            key="refresh_token",
+            value=jwt_token_pair["refresh"],
+            httponly=True,
+            secure=True,
+            samesite="none",
+            max_age=REFRESH_TOKEN_LIFETIME
+        )
+
+        return {"status": "refreshed"}
+    
+    token_pair = TokenSchema(
+        access_token = jwt_token_pair['access'],
+        refresh_token = jwt_token_pair['refresh'], 
     )
 
-    response.set_cookie(
-        key="refresh_token",
-        value=jwt_token_pair["refresh"],
-        httponly=True,
-        secure=True,
-        samesite="none",
-        max_age=REFRESH_TOKEN_LIFETIME
-    )
-
-    return {"status": "refreshed"}
+    return token_pair
 
 
 

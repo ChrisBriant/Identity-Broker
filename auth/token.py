@@ -9,7 +9,7 @@ from typing import Optional
 # Settings for JWT
 #SECRET_KEY = os.environ.get("SECRET_KEY")  # Use a secure key from your Django settings
 ALGORITHM = "HS256"             # Use HS256 or any preferred algorithm
-ACCESS_TOKEN_LIFETIME = 60      # Token lifetime in seconds
+ACCESS_TOKEN_LIFETIME = 10      # Token lifetime in seconds
 REFRESH_TOKEN_LIFETIME = 120
 REFRESH_TOKEN_LIFETIME_HOURS=2
 REFRESH_TOKEN_LIFETIME_DAYS=30
@@ -73,12 +73,15 @@ def obtain_jwt_pair(user_id, idp, alias):
     }
     
 def refresh_jwt_pair(refresh_token: str):
+    print("REFRESH TOKEN", refresh_token)
     try:
         payload = jwt.decode(
             refresh_token,
             os.environ.get("SECRET_KEY"),
             algorithms=[ALGORITHM]
         )
+
+        print("JWT PAYLOAD")
 
         # Ensure this is a refresh token
         if payload.get("type") != "refresh":
@@ -139,4 +142,34 @@ async def validate_jwt_cookie(request: Request):
         raise HTTPException(status_code=401, detail="Invalid token signature.")
     except Exception:
         raise HTTPException(status_code=401, detail="Invalid token.")
+    return payload
+
+
+async def validate_jwt(request: Request):
+
+    token = None
+
+    # 1. Try Authorization header (mobile/API clients)
+    auth_header = request.headers.get("Authorization")
+    if auth_header and auth_header.startswith("Bearer "):
+        token = auth_header.split(" ")[1]
+
+    # 2. Fallback to cookie (browser clients)
+    if not token:
+        token = request.cookies.get("access_token")
+
+    if not token:
+        raise HTTPException(status_code=401, detail="Authentication token missing.")
+
+    try:
+        payload = jwt.decode(token, os.environ.get("SECRET_KEY"), algorithms=[ALGORITHM])
+    except ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Token has expired.")
+    except InvalidAudienceError:
+        raise HTTPException(status_code=401, detail="Invalid audience.")
+    except InvalidSignatureError:
+        raise HTTPException(status_code=401, detail="Invalid token signature.")
+    except Exception:
+        raise HTTPException(status_code=401, detail="Invalid token.")
+
     return payload
