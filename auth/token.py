@@ -7,16 +7,12 @@ from fastapi import HTTPException, Header, Request
 from typing import Optional
 
 # Settings for JWT
-#SECRET_KEY = os.environ.get("SECRET_KEY")  # Use a secure key from your Django settings
 ALGORITHM = "HS256"             # Use HS256 or any preferred algorithm
 ACCESS_TOKEN_LIFETIME = 60      # Token lifetime in seconds
 REFRESH_TOKEN_LIFETIME = 120
 REFRESH_TOKEN_LIFETIME_HOURS=2
 REFRESH_TOKEN_LIFETIME_DAYS=30
-#AUTH_KEY_CHECK = os.environ.get("AUTH_KEY")
 
-# GOOGLE_CERTS_URL = "https://www.googleapis.com/oauth2/v3/certs"
-# GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID')
 
 #Custom exceptions
 
@@ -127,7 +123,6 @@ async def validate_jwt_token(Authorization : str = Header()):
 async def validate_jwt_cookie(request: Request):
     
     token = request.cookies.get("access_token")
-    print("TRYING TO VALIDATE THE COOKIE", token)
     
     if not token:
         raise HTTPException(status_code=401, detail="Authentication cookie missing.")
