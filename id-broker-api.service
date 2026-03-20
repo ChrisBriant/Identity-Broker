@@ -1,0 +1,19 @@
+[Install]
+WantedBy=multi-user.target
+
+[Unit]
+Description=Neuropunk forum backend
+After=network.target
+
+[Service]
+User=django-admin
+Group=www-data
+WorkingDirectory=/home/fastapi/Identity-Broker
+ExecStart=/home/fastapi/environments/id_broker_api/bin/uvicorn main:app --uds /home/fastapi/Identity-Broker/Identity-Broker.sock --workers 4
+Restart=always
+RestartSec=3
+StandardOutput=append:/var/log/id_broker.log
+StandardError=append:/var/log/id_broker.log
+
+[Install]
+WantedBy=multi-user.target

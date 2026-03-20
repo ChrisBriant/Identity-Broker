@@ -1,0 +1,29 @@
+server {
+    server_name id-broker-api.chrisbriant.uk;
+
+    location / {
+        include proxy_params;
+        proxy_pass http://unix://home/fastapi/Identity-Broker/Identity-Broker.sock;
+    }
+
+    listen 443 ssl; # managed by Certbot
+    listen [::]:443 ssl; # managed by Certbot
+    ssl_certificate /etc/letsencrypt/live/id-broker-api.chrisbriant.uk/fullchain.pem; # managed by Certbot
+    ssl_certificate_key /etc/letsencrypt/live/id-broker-api.chrisbriant.uk/privkey.pem; # managed by Certbot
+    include /etc/letsencrypt/options-ssl-nginx.conf; # managed by Certbot
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem; # managed by Certbot
+
+}server {
+    if ($host = id-broker-api.chrisbriant.uk) {
+        return 301 https://$host$request_uri;
+    } # managed by Certbot
+
+
+    server_name id-broker-api.chrisbriant.uk;
+
+    listen [::]:80;
+    listen 80;
+    return 404; # managed by Certbot
+
+
+}
