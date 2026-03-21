@@ -16,7 +16,6 @@ class LinkedInProvider(BaseProvider):
             "client_id": os.environ.get("CLIENT_ID_LINKEDIN"),
             "response_type": "code",
             "redirect_uri": f"{os.environ.get("BACKEND_REDIRECT_URI")}/auth/linkedin/callback",
-            "redirect_uri": "https://localhost:8000/auth/linkedin/callback",
             "scope": "openid profile email",
             "state": state
         }
