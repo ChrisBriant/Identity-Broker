@@ -11,6 +11,8 @@ import math
 import uuid
 import asyncio
 
+class DatabaseUpdateError(Exception):
+    pass
 
 async def get_or_add_user(external_id: str, idp: str, alias: str | None, email: str) -> dict | None:
     new_user_created = False
@@ -60,8 +62,6 @@ async def get_or_add_user(external_id: str, idp: str, alias: str | None, email: 
                 # Update the user object in memory for the return value
                 user.alias = new_alias
 
-            print("NEW USER", user)
-
             # --- Return the final user record details ---
             return {
                 "id": user.id,
@@ -69,7 +69,8 @@ async def get_or_add_user(external_id: str, idp: str, alias: str | None, email: 
                 "idp": user.idp,
                 "alias": user.alias,
                 "new_user" : new_user_created,
-                "email" : user.email
+                "email" : user.email,
+                "terms_accepted" : user.terms_accepted
             }
     except Exception as e:
         # In a real application, you should log the error instead of just printing
@@ -194,6 +195,22 @@ async def validate_auth_code(code: str) -> Users:
         # In a real application, you should log the error instead of just printing
         print(f"Error in validate_auth_code: {e}")
         return None
+
+async def update_terms_accepted(user_id: int) :
+    """
+        Update the users table to accept the terms and conditions
+    """
+    try:
+        async with SessionLocal() as session:
+                update_stmt = update(Users).where(Users.id == int(user_id)).values(terms_accepted=True)
+                await session.execute(update_stmt)
+                await session.commit()
+    except Exception as e:
+        # In a real application, you should log the error instead of just printing
+        print(f"Error in update_terms_accepted: {e}")
+        #Raise exception so that error propagates
+        raise DatabaseUpdateError()                 
+
 
 
 async def main():

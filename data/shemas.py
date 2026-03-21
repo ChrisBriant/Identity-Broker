@@ -18,6 +18,7 @@ class UserProfileSchema(BaseModel):
     id : int
     idp : str
     alias : str
+    accepted_terms : bool
 
 class UserSchema(BaseModel):
     id: int

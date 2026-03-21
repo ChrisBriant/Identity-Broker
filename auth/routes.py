@@ -9,10 +9,10 @@ from data.db_actions import (
     get_feedback,
     create_auth_code,
     validate_auth_code,
+    update_terms_accepted,
 )
 import uuid
 from .token import (
-    obtain_jwt_token, 
     obtain_jwt_pair, 
     refresh_jwt_pair, 
     validate_jwt_token, 
@@ -149,7 +149,7 @@ async def auth_callback_with_redirect(request: Request, provider: str, code: str
             detail="Failed to create the user"
         )
     #Issue a JWT
-    jwt_token_pair = obtain_jwt_pair(str(user_record["id"]),user_record["idp"], user_record["alias"]) 
+    jwt_token_pair = obtain_jwt_pair(str(user_record["id"]),user_record["idp"], user_record["alias"], user_record["terms_accepted"]) 
  
     #Set the redirect URI depending on whether it exists in the cookie set to default if not in cookie
     response_redirect_uri = redirect_uri if redirect_uri else os.environ.get("CLIENT_REDIRECT_URI")
@@ -194,9 +194,50 @@ async def get_session(token_data = Depends(validate_jwt)):
     response = UserProfileSchema(
         id=token_data["user_id"],
         idp= token_data["idp"],
+        accepted_terms = token_data["accepted_terms"],
         alias=token_data["alias"]
     )
     return response
+
+@router.post("/acceptterms", response_model=UserProfileSchema)
+async def accept_terms(response: Response, set_cookie : bool = Query(True), token_data = Depends(validate_jwt)):
+    """
+        Accepts the terms and conditions in the database and then updates the token
+    """
+    try:
+        await update_terms_accepted(token_data["user_id"])
+    except Exception as e:
+        raise HTTPException(status_code=400, detail="Unable to update the terms and conditions.")
+    
+    #Issue a new JWT with the updated accepted terms
+    jwt_token_pair = obtain_jwt_pair(token_data["user_id"], token_data["idp"], token_data["alias"], True)
+    
+    # Set new cookies
+    if set_cookie:
+        response.set_cookie(
+            key="access_token",
+            value=jwt_token_pair["access"],
+            httponly=True,
+            secure=True,
+            samesite="none",
+            max_age=ACCESS_TOKEN_LIFETIME
+        )
+
+        response.set_cookie(
+            key="refresh_token",
+            value=jwt_token_pair["refresh"],
+            httponly=True,
+            secure=True,
+            samesite="none",
+            max_age=REFRESH_TOKEN_LIFETIME
+        )
+
+    return UserProfileSchema(
+        id=token_data["user_id"],
+        idp= token_data["idp"],
+        accepted_terms = True,
+        alias=token_data["alias"]
+    )
 
 
 @router.post("/postfeedback", response_model=FeedbackSchema)
@@ -314,7 +355,7 @@ async def exchange_auth_code_for_jwt(auth_code : AuthCodeSchema):
     if not user:
         raise HTTPException(status_code=401,detail="Authorisation code is invalid")
     
-    jwt_token_pair = obtain_jwt_pair(user.id, user.idp, user.alias)
+    jwt_token_pair = obtain_jwt_pair(user.id, user.idp, user.alias, user.terms_accepted)
 
     response = TokenSchema(
         access_token = jwt_token_pair['access'],

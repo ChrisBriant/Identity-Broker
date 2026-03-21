@@ -23,6 +23,7 @@ class Users(Base):
     email = Column(String, nullable=True)
     alias = Column(String, nullable=True)
     admin = Column(Boolean, nullable=False, default=False)
+    terms_accepted = Column(Boolean, nullable=False, default=False)
 
     __table_args__ = (
         UniqueConstraint("id", "idp", "external_id", name="uq_user_idp"),

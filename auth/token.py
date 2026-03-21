@@ -10,8 +10,7 @@ from typing import Optional
 ALGORITHM = "HS256"             # Use HS256 or any preferred algorithm
 ACCESS_TOKEN_LIFETIME = 60      # Token lifetime in seconds
 REFRESH_TOKEN_LIFETIME = 120
-REFRESH_TOKEN_LIFETIME_HOURS=2
-REFRESH_TOKEN_LIFETIME_DAYS=30
+
 
 
 #Custom exceptions
@@ -26,26 +25,27 @@ class InvalidRefreshTokenError(Exception):
     pass
 
     
-def obtain_jwt_token(user_id,external_id,idp,alias):
-    # Generate a JWT token
-    payload = {
-        "user_id": user_id,
-        #"external_id" : external_id, #Omit for security?
-        "alias" : alias,
-        "idp" : idp,
-        "exp": datetime.now(timezone.utc) + timedelta(seconds=ACCESS_TOKEN_LIFETIME),
-    }
-    jwt_token = jwt.encode(payload, os.environ.get("SECRET_KEY"), algorithm=ALGORITHM)
+# def obtain_jwt_token(user_id,external_id,idp,alias):
+#     # Generate a JWT token
+#     payload = {
+#         "user_id": user_id,
+#         #"external_id" : external_id, #Omit for security?
+#         "alias" : alias,
+#         "idp" : idp,
+#         "exp": datetime.now(timezone.utc) + timedelta(seconds=ACCESS_TOKEN_LIFETIME),
+#     }
+#     jwt_token = jwt.encode(payload, os.environ.get("SECRET_KEY"), algorithm=ALGORITHM)
 
-    return jwt_token
+#     return jwt_token
 
 
-def obtain_jwt_pair(user_id, idp, alias):
+def obtain_jwt_pair(user_id, idp, alias, accepted_terms):
     # 1. Generate Access Token (Short-lived)
     access_payload = {
         "user_id": user_id,
         "alias": alias,
         "idp": idp,
+        "accepted_terms" : accepted_terms,
         "type": "access",  # Important to distinguish types
         "exp": datetime.now(timezone.utc) + timedelta(seconds=ACCESS_TOKEN_LIFETIME),
     }
@@ -58,6 +58,7 @@ def obtain_jwt_pair(user_id, idp, alias):
         "alias": alias,
         "idp": idp,
         "type": "refresh",
+        "accepted_terms" : accepted_terms,
         "exp": datetime.now(timezone.utc) + timedelta(seconds=REFRESH_TOKEN_LIFETIME),
     }
     refresh_token = jwt.encode(refresh_payload, os.environ.get("SECRET_KEY"), algorithm=ALGORITHM)
@@ -88,9 +89,10 @@ def refresh_jwt_pair(refresh_token: str):
         # If you stored these in the refresh token (recommended)
         alias = payload.get("alias")
         idp = payload.get("idp")
+        accepted_terms = payload.get("accepted_terms")
 
         # Generate new tokens
-        return obtain_jwt_pair(user_id, idp, alias)
+        return obtain_jwt_pair(user_id, idp, alias, accepted_terms)
 
     except jwt.ExpiredSignatureError:
         raise RefreshTokenExpiredError("Refresh token expired")
