@@ -363,3 +363,14 @@ async def exchange_auth_code_for_jwt(auth_code : AuthCodeSchema):
     )
 
     return response
+
+@router.get("/testredirect")
+def test_mobile_redirect():
+    """
+        Test redirection to the scheme
+    """    
+    response = RedirectResponse(
+        url="uk.chrisbriant.pairauth://pair?token=abc123",
+        status_code=302
+    )
+    return response
